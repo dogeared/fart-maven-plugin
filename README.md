@@ -1,3 +1,5 @@
+[![Coverage](.github/badges/jacoco.svg)](https://github.com/dogeared/fart-maven-plugin/actions/workflows/build.yml)
+
 # fart-maven-plugin
 
 A Maven plugin that plays fart sounds while your build scrolls by.
