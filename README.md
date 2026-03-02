@@ -1,4 +1,4 @@
-[![Coverage](.github/badges/jacoco.svg)](https://github.com/dogeared/fart-maven-plugin/actions/workflows/build.yml)
+[![Coverage](.github/badges/jacoco.svg)](https://github.com/dogeared/fart-maven-plugin/actions/workflows/main.yml)
 
 # fart-maven-plugin
 

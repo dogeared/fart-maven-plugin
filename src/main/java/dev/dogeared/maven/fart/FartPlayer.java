@@ -6,6 +6,7 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.SourceDataLine;
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.Random;
 
@@ -14,7 +15,7 @@ import java.util.Random;
  */
 public class FartPlayer {
 
-    private static final int FART_COUNT = 10;
+    static final int FART_COUNT = 10;
     private static final Random RANDOM = new Random();
 
     /**
@@ -25,17 +26,37 @@ public class FartPlayer {
      */
     public static boolean play(float volume) {
         int fartNumber = 1 + RANDOM.nextInt(FART_COUNT);
+        return playFart(fartNumber, volume);
+    }
+
+    /**
+     * Play a specific fart sound by number (1-10).
+     */
+    static boolean playFart(int fartNumber, float volume) {
+        DecodedFart decoded = decodeFart(fartNumber);
+        if (decoded == null) {
+            return false;
+        }
+        return playPcm(decoded.data, decoded.format, volume);
+    }
+
+    /**
+     * Load and decode a fart MP3 from classpath resources to PCM data.
+     *
+     * @param fartNumber fart number (1-10)
+     * @return decoded PCM data and format, or null if resource not found
+     */
+    static DecodedFart decodeFart(int fartNumber) {
         String resource = "/farts/fart" + fartNumber + ".mp3";
 
         try (InputStream raw = FartPlayer.class.getResourceAsStream(resource)) {
             if (raw == null) {
-                return false;
+                return null;
             }
 
             BufferedInputStream buffered = new BufferedInputStream(raw);
             AudioInputStream mp3Stream = AudioSystem.getAudioInputStream(buffered);
 
-            // Decode MP3 to PCM
             AudioFormat baseFormat = mp3Stream.getFormat();
             AudioFormat decodedFormat = new AudioFormat(
                     AudioFormat.Encoding.PCM_SIGNED,
@@ -48,34 +69,57 @@ public class FartPlayer {
             );
 
             try (AudioInputStream pcmStream = AudioSystem.getAudioInputStream(decodedFormat, mp3Stream)) {
-                SourceDataLine line = AudioSystem.getSourceDataLine(decodedFormat);
-                line.open(decodedFormat);
-
-                // Set volume
-                if (line.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
-                    FloatControl gainControl = (FloatControl) line.getControl(FloatControl.Type.MASTER_GAIN);
-                    float dB = (float) (20.0 * Math.log10(Math.max(0.0001, volume)));
-                    dB = Math.max(gainControl.getMinimum(), Math.min(gainControl.getMaximum(), dB));
-                    gainControl.setValue(dB);
-                }
-
-                line.start();
-
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
                 byte[] buffer = new byte[4096];
                 int bytesRead;
                 while ((bytesRead = pcmStream.read(buffer)) != -1) {
-                    line.write(buffer, 0, bytesRead);
+                    out.write(buffer, 0, bytesRead);
                 }
+                return new DecodedFart(out.toByteArray(), decodedFormat);
+            } finally {
+                mp3Stream.close();
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
-                line.drain();
-                line.stop();
-                line.close();
+    /**
+     * Play raw PCM data through the system audio output.
+     */
+    static boolean playPcm(byte[] pcmData, AudioFormat format, float volume) {
+        try {
+            SourceDataLine line = AudioSystem.getSourceDataLine(format);
+            line.open(format);
+
+            if (line.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                FloatControl gainControl = (FloatControl) line.getControl(FloatControl.Type.MASTER_GAIN);
+                float dB = (float) (20.0 * Math.log10(Math.max(0.0001, volume)));
+                dB = Math.max(gainControl.getMinimum(), Math.min(gainControl.getMaximum(), dB));
+                gainControl.setValue(dB);
             }
 
-            mp3Stream.close();
+            line.start();
+            line.write(pcmData, 0, pcmData.length);
+            line.drain();
+            line.stop();
+            line.close();
             return true;
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    /**
+     * Holds decoded PCM audio data and its format.
+     */
+    static class DecodedFart {
+        final byte[] data;
+        final AudioFormat format;
+
+        DecodedFart(byte[] data, AudioFormat format) {
+            this.data = data;
+            this.format = format;
         }
     }
 }

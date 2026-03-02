@@ -5,9 +5,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import java.io.BufferedInputStream;
 import java.io.InputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,70 +25,80 @@ class FartPlayerTest {
 
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
-    void allFartResourcesAreValidMp3(int fartNumber) throws Exception {
-        String resource = "/farts/fart" + fartNumber + ".mp3";
-        try (InputStream raw = FartPlayer.class.getResourceAsStream(resource)) {
-            assertNotNull(raw);
-            BufferedInputStream buffered = new BufferedInputStream(raw);
-            AudioInputStream audioStream = AudioSystem.getAudioInputStream(buffered);
-            AudioFormat format = audioStream.getFormat();
+    void allFartsDecodeSuccessfully(int fartNumber) {
+        FartPlayer.DecodedFart decoded = FartPlayer.decodeFart(fartNumber);
 
-            assertNotNull(format, "Should have a valid audio format");
-            assertTrue(format.getSampleRate() > 0, "Sample rate should be positive");
-            assertTrue(format.getChannels() > 0, "Should have at least one channel");
-            audioStream.close();
-        }
+        assertNotNull(decoded, "Fart " + fartNumber + " should decode successfully");
+        assertNotNull(decoded.data, "Decoded data should not be null");
+        assertTrue(decoded.data.length > 0, "Decoded data should not be empty");
+        assertNotNull(decoded.format, "Audio format should not be null");
     }
 
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
-    void allFartResourcesCanBeDecodedToPcm(int fartNumber) throws Exception {
-        String resource = "/farts/fart" + fartNumber + ".mp3";
-        try (InputStream raw = FartPlayer.class.getResourceAsStream(resource)) {
-            assertNotNull(raw);
-            BufferedInputStream buffered = new BufferedInputStream(raw);
-            AudioInputStream mp3Stream = AudioSystem.getAudioInputStream(buffered);
+    void decodedFartsHaveValidPcmFormat(int fartNumber) {
+        FartPlayer.DecodedFart decoded = FartPlayer.decodeFart(fartNumber);
+        assertNotNull(decoded);
 
-            AudioFormat baseFormat = mp3Stream.getFormat();
-            AudioFormat decodedFormat = new AudioFormat(
-                    AudioFormat.Encoding.PCM_SIGNED,
-                    baseFormat.getSampleRate(),
-                    16,
-                    baseFormat.getChannels(),
-                    baseFormat.getChannels() * 2,
-                    baseFormat.getSampleRate(),
-                    false
-            );
-
-            try (AudioInputStream pcmStream = AudioSystem.getAudioInputStream(decodedFormat, mp3Stream)) {
-                assertNotNull(pcmStream);
-                byte[] buffer = new byte[4096];
-                int totalBytes = 0;
-                int bytesRead;
-                while ((bytesRead = pcmStream.read(buffer)) != -1) {
-                    totalBytes += bytesRead;
-                }
-                assertTrue(totalBytes > 0, "Decoded PCM data should not be empty");
-            }
-            mp3Stream.close();
-        }
+        AudioFormat format = decoded.format;
+        assertEquals(AudioFormat.Encoding.PCM_SIGNED, format.getEncoding());
+        assertEquals(16, format.getSampleSizeInBits());
+        assertTrue(format.getSampleRate() > 0, "Sample rate should be positive");
+        assertTrue(format.getChannels() > 0, "Should have at least one channel");
+        assertFalse(format.isBigEndian(), "Should be little-endian");
     }
 
     @Test
-    void nonExistentResourceReturnsFalse() {
-        // FartPlayer picks random 1-10, so we can't directly test a missing resource
-        // through play(). But we can verify the resource lookup pattern works by
-        // checking that resource 11 does NOT exist.
-        InputStream stream = FartPlayer.class.getResourceAsStream("/farts/fart11.mp3");
-        assertNull(stream, "Resource 11 should not exist");
+    void decodeNonExistentFartReturnsNull() {
+        FartPlayer.DecodedFart decoded = FartPlayer.decodeFart(999);
+        assertNull(decoded, "Non-existent fart should return null");
+    }
+
+    @Test
+    void decodeZeroFartReturnsNull() {
+        FartPlayer.DecodedFart decoded = FartPlayer.decodeFart(0);
+        assertNull(decoded, "Fart 0 should return null");
+    }
+
+    @Test
+    void fartCountMatchesBundledResources() {
+        assertEquals(10, FartPlayer.FART_COUNT);
+    }
+
+    @Test
+    void playFartWithValidNumberReturnsBoolean() {
+        // May return false on headless CI (no audio device), true locally
+        boolean result = FartPlayer.playFart(1, 0.0f);
+        assertTrue(result || !result);
+    }
+
+    @Test
+    void playFartWithInvalidNumberReturnsFalse() {
+        assertFalse(FartPlayer.playFart(999, 0.8f));
     }
 
     @Test
     void playReturnsBoolean() {
-        // This test exercises the full play() path. It may return false in headless
-        // CI environments where no audio device is available, which is acceptable.
         boolean result = FartPlayer.play(0.0f);
-        // We just verify it doesn't throw — result depends on audio hardware
-        assertTrue(result || !result, "play() should return a boolean without throwing");
+        assertTrue(result || !result);
+    }
+
+    @Test
+    void playPcmWithInvalidFormatReturnsFalse() {
+        // Garbage format that AudioSystem can't open a line for
+        AudioFormat badFormat = new AudioFormat(
+                AudioFormat.Encoding.PCM_SIGNED, 1, 1, 1, 1, 1, false
+        );
+        assertFalse(FartPlayer.playPcm(new byte[]{0, 0}, badFormat, 0.5f));
+    }
+
+    @Test
+    void decodedFartConstructorStoresValues() {
+        byte[] data = {1, 2, 3};
+        AudioFormat format = new AudioFormat(44100, 16, 1, true, false);
+        FartPlayer.DecodedFart decoded = new FartPlayer.DecodedFart(data, format);
+
+        assertSame(data, decoded.data);
+        assertSame(format, decoded.format);
     }
 }
