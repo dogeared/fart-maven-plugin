@@ -92,8 +92,8 @@ Bind the `stop-fart` goal to a later phase to silence farts partway through:
 | Parameter | Property | Default | Description |
 |-----------|----------|---------|-------------|
 | `skip` | `fart.skip` | `false` | Disable fart playback |
-| `minInterval` | `fart.minInterval` | `3000` | Minimum milliseconds between farts |
-| `maxInterval` | `fart.maxInterval` | `8000` | Maximum milliseconds between farts |
+| `minInterval` | `fart.minInterval` | `500` | Minimum milliseconds between farts |
+| `maxInterval` | `fart.maxInterval` | `500` | Maximum milliseconds between farts |
 | `volume` | `fart.volume` | `0.8` | Volume level (0.0 to 1.0) |
 
 ### Examples

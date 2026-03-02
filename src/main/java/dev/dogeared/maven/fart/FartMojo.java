@@ -7,6 +7,7 @@ import org.apache.maven.plugins.annotations.Parameter;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 /**
  * Plays fart sounds at random intervals while your Maven build scrolls by.
@@ -18,6 +19,9 @@ public class FartMojo extends AbstractMojo {
     static final AtomicBoolean RUNNING = new AtomicBoolean(false);
     static volatile Thread fartThread;
 
+    // Package-private for testing — allows swapping in a mock player
+    static Consumer<Float> playerFunction = FartPlayer::play;
+
     /**
      * Skip fart playback. Use -Dfart.skip=true to silence the build.
      */
@@ -27,13 +31,13 @@ public class FartMojo extends AbstractMojo {
     /**
      * Minimum interval in milliseconds between farts.
      */
-    @Parameter(property = "fart.minInterval", defaultValue = "3000")
+    @Parameter(property = "fart.minInterval", defaultValue = "500")
     private int minInterval;
 
     /**
      * Maximum interval in milliseconds between farts.
      */
-    @Parameter(property = "fart.maxInterval", defaultValue = "8000")
+    @Parameter(property = "fart.maxInterval", defaultValue = "500")
     private int maxInterval;
 
     /**
@@ -62,7 +66,7 @@ public class FartMojo extends AbstractMojo {
 
         Thread thread = new Thread(() -> {
             // Play one immediately so short builds still get a fart
-            FartPlayer.play(vol);
+            playerFunction.accept(vol);
 
             while (RUNNING.get()) {
                 try {
@@ -70,7 +74,7 @@ public class FartMojo extends AbstractMojo {
                     Thread.sleep(delay);
 
                     if (RUNNING.get()) {
-                        FartPlayer.play(vol);
+                        playerFunction.accept(vol);
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
