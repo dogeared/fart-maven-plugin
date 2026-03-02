@@ -1,0 +1,43 @@
+name: Build and Coverage Badge
+
+on:
+  push:
+    branches:
+      - main # or master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch the full history to enable committing the badge
+          fetch-depth: 0 
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21' # Use your project's Java version
+          distribution: 'temurin'
+
+      - name: Build with Maven and run tests
+        # This command runs tests and generates JaCoCo reports
+        run: mvn clean test 
+
+      - name: Generate JaCoCo Badge
+        uses: cicirello/jacoco-badge-generator@v2.1.0
+        with:
+          # Default location for Maven projects
+          jacoco-csv-file: target/site/jacoco/jacoco.csv 
+          # Default directory where badges will be saved
+          badges-directory: .github/badges/
+
+      - name: Commit and push the badge
+        uses: EndBug/add-and-commit@v9
+        with:
+          # Commits the generated badge file to the repository
+          add: '.github/badges/*.svg' 
+          message: 'chore: generate JaCoCo coverage badge'
+        # Only run on the main branch pushes, not PRs
+        if: github.ref == 'refs/heads/main' 
