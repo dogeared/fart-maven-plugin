@@ -23,7 +23,8 @@ jobs:
 
       - name: Build with Maven and run tests
         # This command runs tests and generates JaCoCo reports
-        run: mvn clean test 
+        # -Dfart.skip=true prevents audio playback attempts on headless CI
+        run: mvn clean test -Dfart.skip=true
 
       - name: Generate JaCoCo Badge
         uses: cicirello/jacoco-badge-generator@v2.1.0

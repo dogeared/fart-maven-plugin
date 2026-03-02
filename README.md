@@ -24,6 +24,17 @@ mvn clean install
 
 This installs the plugin to your local Maven repository.
 
+### Dogfooding
+
+The plugin is set up to fart during its own build via the `dogfood` profile. Since the plugin references itself, you need to install it first:
+
+```bash
+mvn clean install              # install to local .m2 repo
+mvn clean install -Pdogfood    # rebuild with farts
+```
+
+In CI, the dogfood profile is not activated and `-Dfart.skip=true` is passed to avoid audio playback on headless runners.
+
 ## Usage
 
 ### Quick test
@@ -104,10 +115,10 @@ Skip farts from the command line:
 mvn clean install -Dfart.skip=true
 ```
 
-Crank up the frequency:
+Slow down the frequency:
 
 ```bash
-mvn clean install -Dfart.minInterval=500 -Dfart.maxInterval=2000
+mvn clean install -Dfart.minInterval=3000 -Dfart.maxInterval=8000
 ```
 
 Configure in `pom.xml`:
