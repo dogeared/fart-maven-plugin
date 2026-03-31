@@ -59,7 +59,7 @@ Add the plugin to your project's `pom.xml`:
         <plugin>
             <groupId>dev.dogeared</groupId>
             <artifactId>fart-maven-plugin</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <version>1.0.1</version>
             <executions>
                 <execution>
                     <goals>
@@ -131,7 +131,7 @@ Configure in `pom.xml`:
 <plugin>
     <groupId>dev.dogeared</groupId>
     <artifactId>fart-maven-plugin</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.1</version>
     <configuration>
         <volume>0.5</volume>
         <minInterval>1000</minInterval>
